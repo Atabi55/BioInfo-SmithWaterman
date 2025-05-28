@@ -60,6 +60,17 @@ def smith_waterman(seq1, seq2, match=2, mismatch=-1, gap=-2, use_blosum62=False)
     print_2d_list(arrows_matrix)  # test
 
 
+    #Traceback starts at cell(s) with highest score
+    #Find the highest score in matrix
+    high_score = max([max(x) for x in matrix])
+
+    #print(f"Highest score: {high_score}")#test
+
+    #count the number of highest value cells in each sublist (row) of matrix with matrix[i].count(high_score)
+    #locate the index of each such cell in the list with matrix[i].index(high_score, start)
+    #for each discovered cell with highest value, use the arrows_matrix to traceback until cell with value 0 reached
+    #record a new pair of strings for each traceback, inserting sequence character or gap based on arrows_matrix
+    #resulting strings are the final output.
 
 
 #returns the score for comparing only 2 characters, blosum62 is used if specified.
@@ -75,7 +86,11 @@ def match_mismatch_score(c1, c2, match, mismatch, use_blosum62=False):
             return mismatch
 
 
-#helper function to print matrix
+
+
+
+
+#helper function to print 2d list
 def print_2d_list(x):
     for i in range(len(x)):
         print(x[i])
