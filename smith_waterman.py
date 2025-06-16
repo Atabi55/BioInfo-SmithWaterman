@@ -1,6 +1,4 @@
-
-
-
+from Bio.SubsMat import MatrixInfo
 
 
 def smith_waterman(seq1, seq2, match=2, mismatch=-1, gap=-2, use_blosum62=False):
@@ -53,6 +51,8 @@ def smith_waterman(seq1, seq2, match=2, mismatch=-1, gap=-2, use_blosum62=False)
                     arrows_matrix[i+1][j+1].append("up")
                 if recurrence[2] == max_val:
                     arrows_matrix[i+1][j+1].append("left")
+            
+            
 
     print("All values of the matrix:")
     print_2d_list(matrix)  # test
@@ -64,7 +64,22 @@ def smith_waterman(seq1, seq2, match=2, mismatch=-1, gap=-2, use_blosum62=False)
     #Find the highest score in matrix
     high_score = max([max(x) for x in matrix])
 
-    #print(f"Highest score: {high_score}")#test
+    alignment_results = []
+
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
+            if matrix[i][j] == high_score:
+                traceback(seq1, seq2, arrows_matrix, matrix, i, j, "", "", alignment_results)
+    
+    print(f"Highest score: {high_score}")
+    print(f"Number of optimal alignments: {len(alignment_results)}")
+    for idx, (a1, a2) in enumerate(alignment_results, start=1):
+        print(f"\nAlignment {idx}:")
+        print(a1)
+        print(a2)
+
+    return alignment_results
+
 
     #count the number of highest value cells in each sublist (row) of matrix with matrix[i].count(high_score)
     #locate the index of each such cell in the list with matrix[i].index(high_score, start)
@@ -72,13 +87,42 @@ def smith_waterman(seq1, seq2, match=2, mismatch=-1, gap=-2, use_blosum62=False)
     #record a new pair of strings for each traceback, inserting sequence character or gap based on arrows_matrix
     #resulting strings are the final output.
 
+def traceback(seq1, seq2, arrows_matrix, matrix, i, j, aligned1, aligned2,alignment_results):
+    if matrix[i][j] == 0:
+        reversed_al1 = ""
+        reversed_al2 = ""
+        for char in reversed(aligned1):
+            reversed_al1 += char
 
+        for char in reversed(aligned2):
+            reversed_al2 += char
+
+        alignment_results.append((reversed_al1, reversed_al2)) #reverse the strings and append to results
+        return
+
+    for direction in arrows_matrix[i][j]:
+        if direction == "diagonal":
+            traceback(seq1, seq2, arrows_matrix, matrix,
+                      i-1, j-1,
+                      aligned1 + seq1[i-1], aligned2 + seq2[j-1], alignment_results)
+        elif direction == "up":
+            traceback(seq1, seq2, arrows_matrix, matrix,
+                      i-1, j,
+                      aligned1 + seq1[i-1], aligned2 + "-", alignment_results)
+        elif direction == "left":
+            traceback(seq1, seq2, arrows_matrix, matrix,
+                      i, j-1,
+                      aligned1 + "-", aligned2 + seq2[j-1], alignment_results)
+            
 #returns the score for comparing only 2 characters, blosum62 is used if specified.
 def match_mismatch_score(c1, c2, match, mismatch, use_blosum62=False):
     if use_blosum62:
-        #TODO implement later
-        #pass
-        return None
+        blosum = MatrixInfo.blosum62
+        if (c1, c2) in blosum:
+            return blosum[(c1, c2)]
+        elif (c2, c1) in blosum: #look for the reverse match also
+            return blosum[(c2, c1)]
+        else: return None
     else:
         if c1 == c2:
             return match
