@@ -1,5 +1,7 @@
-from Bio.SubsMat import MatrixInfo
+import pandas as pd
 
+#creating blosum62 matrix for future use
+blosum62 = pd.read_csv( 'blosum62.dat', index_col=0, header=0, sep=r'\s+' )
 
 def smith_waterman(seq1, seq2, match=2, mismatch=-1, gap=-2, use_blosum62=False):
     #Inputs: 2 DNA sequences, match, mismatch, gap scores, use_blosum62 boolean
@@ -18,8 +20,8 @@ def smith_waterman(seq1, seq2, match=2, mismatch=-1, gap=-2, use_blosum62=False)
     for i in range(len(seq2)+1):
         matrix[0][i] = 0
 
-    print("Empty list:")
-    print_2d_list(matrix)#test
+    #print("Empty list:")
+    #print_2d_list(matrix)#test
 
     #arrows_matrix: 2-dimensional list, same size as matrix
     #holds the direction from which the calculated score comes
@@ -54,10 +56,10 @@ def smith_waterman(seq1, seq2, match=2, mismatch=-1, gap=-2, use_blosum62=False)
             
             
 
-    print("All values of the matrix:")
-    print_2d_list(matrix)  # test
-    print("Directions matrix:")
-    print_2d_list(arrows_matrix)  # test
+    #print("All values of the matrix:")
+    #print_2d_list(matrix)  # test
+    #print("Directions matrix:")
+    #print_2d_list(arrows_matrix)  # test
 
 
     #Traceback starts at cell(s) with highest score
@@ -74,8 +76,13 @@ def smith_waterman(seq1, seq2, match=2, mismatch=-1, gap=-2, use_blosum62=False)
     print(f"Highest score: {high_score}")
     print(f"Number of optimal alignments: {len(alignment_results)}")
     for idx, (a1, a2) in enumerate(alignment_results, start=1):
+
+        #making the "|" bars between two aligned subsequences
+        bars = ["|" if a1[i] == a2[i] else " " for i in range(len(a1))]
+
         print(f"\nAlignment {idx}:")
         print(a1)
+        print("".join(bars))
         print(a2)
 
     return alignment_results
@@ -87,7 +94,7 @@ def smith_waterman(seq1, seq2, match=2, mismatch=-1, gap=-2, use_blosum62=False)
     #record a new pair of strings for each traceback, inserting sequence character or gap based on arrows_matrix
     #resulting strings are the final output.
 
-def traceback(seq1, seq2, arrows_matrix, matrix, i, j, aligned1, aligned2,alignment_results):
+def traceback(seq1, seq2, arrows_matrix, matrix, i, j, aligned1, aligned2, alignment_results):
     if matrix[i][j] == 0:
         reversed_al1 = ""
         reversed_al2 = ""
@@ -113,23 +120,19 @@ def traceback(seq1, seq2, arrows_matrix, matrix, i, j, aligned1, aligned2,alignm
             traceback(seq1, seq2, arrows_matrix, matrix,
                       i, j-1,
                       aligned1 + "-", aligned2 + seq2[j-1], alignment_results)
-            
+
+
+
+
 #returns the score for comparing only 2 characters, blosum62 is used if specified.
 def match_mismatch_score(c1, c2, match, mismatch, use_blosum62=False):
     if use_blosum62:
-        blosum = MatrixInfo.blosum62
-        if (c1, c2) in blosum:
-            return blosum[(c1, c2)]
-        elif (c2, c1) in blosum: #look for the reverse match also
-            return blosum[(c2, c1)]
-        else: return None
+        return blosum62[c1][c2]
     else:
         if c1 == c2:
             return match
         else:
             return mismatch
-
-
 
 
 
@@ -142,6 +145,11 @@ def print_2d_list(x):
 
 
 if __name__ == "__main__":
+    #2 test cases
     seq1 = "AATCGTTCGAC"
     seq2 = "AACGTTTTCGGCA"
     smith_waterman(seq1, seq2)
+
+    seq1 = "PHSWG"
+    seq2 = "HGWAG"
+    smith_waterman(seq1, seq2, gap=-8, use_blosum62=True)
