@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from ete3 import Tree
+from ete3 import Tree, TreeStyle
 
 
 
@@ -23,66 +23,68 @@ def neighbor_join():
     #set datatype of whole dataframe to Float64
     df_mirrored = df_mirrored.astype("Float64")
 
+    # Initialize labels for Newick string
+    labels = {name: name for name in df_mirrored.columns}
 
-    tree_string = "" #will store the final result tree in string form
+    D = df_mirrored.copy()
 
-    if len(df_mirrored) == 2:
-        table = df_mirrored
-        tree_string = f"({table.columns[0]}:{table.iloc[0][1]/2},{table.columns[1]}:{table.iloc[0][1]/2});"
-        return tree_string
+    while len(D) > 2:
+        n = len(D)
+        # Calculate r values
+        r = D.sum(axis=1) / (n - 2)
 
-    i = len(df_mirrored) - 2
-    while i:
-        ri = df_mirrored.sum(axis=1).tolist()
-        ri = [x / (len(df_mirrored) - 2) for x in ri]
-        print(ri)
+        # Compute Q matrix
+        Q = pd.DataFrame(np.zeros(D.shape), index=D.index, columns=D.columns)
+        for i in D.index:
+            for j in D.columns:
+                if i != j:
+                    Q.loc[i, j] = D.loc[i, j] - r[i] - r[j]
+                else:
+                    Q.loc[i, j] = np.nan
 
-        #get indices of upper triangle elements in dataframe
-        rows, cols = np.triu_indices(len(df_mirrored), k=1)
+        # Find pair with minimum Q value
+        min_idx = Q.stack().idxmin()
+        i, j = min_idx
 
-        for r, c in zip(rows, cols):
-            Q = df_mirrored
-            Q.iat[r, c] = Q.iat[r, c] - ri[r] - ri[c]
+        # Calculate branch lengths
+        dij = D.loc[i, j]
+        li = 0.5 * dij + 0.5 * (r[i] - r[j])
+        lj = dij - li
 
-        print(Q)
+        # Create new label in Newick format
+        new_label = f"({labels[i]}:{li:.5f},{labels[j]}:{lj:.5f})"
 
-        n = len(Q)
-        rows, cols = np.tril_indices(n, k=-1)
+        # Update distance matrix
+        new_row = {}
+        for k in D.index:
+            if k not in [i, j]:
+                dik = D.loc[i, k]
+                djk = D.loc[j, k]
+                new_row[k] = 0.5 * (dik + djk - dij)
 
-        # Set those positions to NaN
-        for r, c in zip(rows, cols):
-            Q.iat[r, c] = np.nan
+        # Remove i and j, add new node
+        D = D.drop(index=[i, j], columns=[i, j])
+        D.loc[new_label] = pd.Series(new_row)
+        D[new_label] = pd.Series(new_row)
+        D.loc[new_label, new_label] = 0
 
+        # Update labels
+        labels[new_label] = new_label
+        labels.pop(i)
+        labels.pop(j)
 
-        # merge dataframe with its mirror to fill the other half
-        Q = Q.T.combine_first(Q)
-        print(Q)
-        break #debug, to stop loop
+    # Final join
+    i, j = D.index
+    dij = D.loc[i, j]
+    newick = f"({labels[i]}:{dij/2:.5f},{labels[j]}:{dij/2:.5f})"
+    return newick
 
-
-        #now we have
-
-
-
-        i = i - 1
-
-
-    """
-    t2 = Tree('(A:1,(B:1,(C:1,D:1):0.5):0.5);')
-    t2 = Tree('((((C:11,D:17):7.25),((B:6.75,E:14.25):4.75)),A:4.75);')
-    t2.show()
-    """
-
-    return tree_string
-
-
-def draw_tree():
-    #inputs: list of species, list of distance between species
-    pass
 
 
 if __name__ == "__main__":
-    tree_tuple_string = neighbor_join()
-    print(tree_tuple_string)
+    tree_tuple_string = neighbor_join() + ";"
+    print(tree_tuple_string)#prints the tree in Newick format
     t3 = Tree(tree_tuple_string)
-    t3.show()
+    ts = TreeStyle()
+    ts.show_branch_length = True
+    t3.render("output_tree.png", w=600, units="px", tree_style=ts)
